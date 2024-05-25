@@ -4,22 +4,79 @@ import numpy as np
 import streamlit as st
 import time
 import streamlit_shadcn_ui as ui
-good_duration=0
-bad_duration=0
+import matplotlib.pyplot as plt
+import base64
 
-#Setting Config
 st.set_page_config(
     page_title="Vision Track",
     page_icon=":world_map:️",
     layout="wide",
 )
-"# Vision Track"
-
-"""streamlit-folium integrates two great open-source projects in the Python ecosystem:
-[Streamlit](https://streamlit.io) and
-[Folium](https://python-visualization.github.io/folium/)!"""
 left, right = st.columns(2)
 
+footer="""<style>
+a:link , a:visited{
+color: blue;
+background-color: transparent;
+text-decoration: underline;
+}
+
+a:hover,  a:active {
+color: red;
+background-color: transparent;
+text-decoration: underline;
+}
+
+.footer {
+position: fixed;
+left: 2;
+bottom: 0;
+width: 100%;
+background-color: rgb(14, 17, 23);
+color: white;
+text-align: left;
+}
+</style>
+<div class="footer">
+<p>Developed with ❤ by Team Brackets</p>
+</div>
+"""
+st.markdown(footer,unsafe_allow_html=True)
+
+
+
+st.cache_data(experimental_allow_widgets=True)
+def get_base64_of_bin_file(bin_file):
+    with open(bin_file, 'rb') as f:
+        data = f.read()
+    return base64.b64encode(data).decode()
+
+def set_png_as_page_bg(png_file):
+    bin_str = get_base64_of_bin_file(png_file)
+    page_bg_img = '''
+    <style>
+    body {
+    background-image: url("data:image/png;base64,%s");
+    background-size: cover;
+    }
+    </style>
+    ''' % bin_str
+    
+    st.markdown(page_bg_img, unsafe_allow_html=True)
+    return
+
+#set_png_as_page_bg('bg.png')
+good_duration = 0
+bad_duration = 0
+total_screentime = good_duration + bad_duration
+with left:
+
+    "# Vision Track"
+    with ui.element("div", className="flex gap-2", key="buttons_group1"):
+        ui.element("link_button", text="Diagnosia | Home", url="https://diagnosia.netlify.app", variant="outline", key="btn1")
+
+    """Vision Track monitors your eye posture using your webcam, """
+    """ providing real-time feedback and duration stats to promote healthier screen habits."""
 # Initialize the MediaPipe Face Mesh
 mp_face_mesh = mp.solutions.face_mesh
 face_mesh = mp_face_mesh.FaceMesh(min_detection_confidence=0.5, min_tracking_confidence=0.5)
@@ -31,31 +88,37 @@ mp_drawing_styles = mp.solutions.drawing_styles
 if 'checkbox_state' not in st.session_state:
     st.session_state['checkbox_state'] = False
 
+if 'run_indefinitely' not in st.session_state:
+    st.session_state['run_indefinitely'] = False
+
 def toggle_checkbox():
     st.session_state['checkbox_state'] = not st.session_state['checkbox_state']
 
 # Streamlit app title
-
-
 with right:
+    #st.image("https://imgs.search.brave.com/6ethPl2SMeVLlGIOceAuLnADslieJtjz2eSC3fnGfrI/rs:fit:860:0:0/g:ce/aHR0cHM6Ly93d3cu/ZXJnb3Ryb24uY29t/L1BvcnRhbHMvMC9J/bWFnZXMvZXJnby1t/b25pdG9yLXRpcHMu/anBn",width=200)
+    # Checkbox for indefinite running
+    run_indefinitely = st.checkbox('Indefinite', value=st.session_state['run_indefinitely'])
+    st.session_state['run_indefinitely'] = run_indefinitely
+
     # Slider placeholder
     slider_placeholder = st.empty()
 
-    # Checkbox for running the camera
-    run = st.checkbox('Run', value=st.session_state['checkbox_state'])
+    # Button to toggle the tool
+    run = st.button("Toggle Tool", on_click=toggle_checkbox, type="primary")
+    
     posture_placeholder = st.empty()
     goodtime_placeholder = st.empty()
     badtime_placeholder = st.empty()
     totalgoodtime_placeholder = st.empty()
     totalbadtime_placeholder = st.empty()
-    totaltime_placeholder = st.empty
+    totaltime_placeholder = st.empty()
     cols = st.columns(3)
 
-
-# Disable the slider if the camera is running
-if run:
-    total_time = st.session_state.get('total_time', 10)
-    slider_placeholder.write(f"Total time (seconds): {total_time}")
+# Disable the slider if the camera is running indefinitely
+if st.session_state['run_indefinitely']:
+    total_time = None
+    slider_placeholder.write("Running indefinitely...")
 else:
     total_time = slider_placeholder.slider('Set the total time (seconds)', min_value=1, max_value=60, value=10)
     st.session_state['total_time'] = total_time
@@ -73,13 +136,16 @@ text = "Initializing..."
 # Check if 'run' checkbox is selected
 with left:
     FRAME_WINDOW = st.image([])
-    if run:
-        start_time=time.time()
+    if st.session_state['checkbox_state']:
+        start_time = time.time()
         start_time_bad = time.time()
         start_time_good = time.time()
-        end_time = start_time + total_time
+        if total_time:
+            end_time = start_time + total_time
+        else:
+            end_time = None
 
-    while run and time.time() < end_time:
+    while st.session_state['checkbox_state'] and (end_time is None or time.time() < end_time):
         ret, image = cap.read()
         if not ret:
             break
@@ -148,11 +214,11 @@ with left:
                     if start_time_bad is None and start_time_good is None:
                         start_time_bad = time.time()
                     elif start_time_bad is None and start_time_good is not None:
-                        good_eye_level_duration += (time.time() - start_time_good)
+                        good_eye_level_duration += 4.5*(time.time() - start_time_good)
                         start_time_good = None
                         start_time_bad = time.time()
                     else:
-                        bad_eye_level_duration += (time.time() - start_time_bad)
+                        bad_eye_level_duration += 4.5*(time.time() - start_time_bad)
                         start_time_bad = None
                 elif -10 <= x <= 10:
                     text = "Good Eye Level"
@@ -166,9 +232,6 @@ with left:
                         good_eye_level_duration += (time.time() - start_time_good)
                         start_time_good = None
 
-                # If not "Good Eye Level", reset the timer
-                
-
                 # Display the nose direction
                 nose_3d_projection, jacobian = cv2.projectPoints(nose_3d, rot_vec, trans_vec, cam_matrix, dist_matrix)
                 p1 = (int(nose_2d[0]), int(nose_2d[1]))
@@ -181,7 +244,6 @@ with left:
         good_duration = good_eye_level_duration
         bad_duration = bad_eye_level_duration  
         with right:
-            
             goodtime_placeholder.text(f"Good Eye Level Time: {good_duration:.2f} seconds")
             badtime_placeholder.text(f"Bad Eye Level Time: {bad_duration:.2f} seconds")
 
@@ -189,7 +251,6 @@ with left:
         if start_time_good is not None:
             good_eye_level_duration += (time.time() - start_time_good)
             start_time_good = None
-        
 
         if start_time_bad is not None:
             bad_eye_level_duration += (time.time() - start_time_bad)
@@ -206,9 +267,39 @@ with left:
 
 # Release the video capture object
 cap.release()
+if good_duration + bad_duration > 0:
+    perc_good = (good_duration / (good_duration + bad_duration)) * 100
+    perc_bad = (bad_duration / (good_duration + bad_duration)) * 100
+else:
+    perc_good = 0
+    perc_bad = 0
+
+labels = 'Good Posture Duration', 'Bad Posture Duration'
+sizes = [perc_good, perc_bad]
 with cols[0]:
-    ui.metric_card(title="Good Eye Posture", content=f"{good_duration:.2f} seconds", description="Increase this time!", key="card1")
+    ui.metric_card(title="Good Eye Posture", content=f"{good_duration:.2f} seconds", description="", key="card1")
 with cols[1]:
-    ui.metric_card(title="Bad Eye Posture", content=f"{bad_duration:.2f} seconds", description="Decrease this time!", key="card2")
+    ui.metric_card(title="Bad Eye Posture", content=f"{bad_duration:.2f} seconds", description="", key="card2")
 with cols[2]:
-    ui.metric_card(title="Total Screen time", content="$45,231.89", description="+20.1% from last month", key="card3")
+    ui.metric_card(title="Total Screen time", content=f"{(good_duration+bad_duration):.2f} seconds", description="", key="card3")
+with right:
+    "#### Your Report"
+    if sum(sizes) > 0:
+        with right:
+            fig1, ax1 = plt.subplots()
+            ax1.pie(sizes, labels=labels, autopct='%1.1f%%', shadow=True, startangle=90)
+            ax1.axis('equal')
+            st.pyplot(fig1)
+    else:
+        with right:
+            st.write("No data to display in the pie chart.")
+
+    if perc_bad >= 70:
+        with left:
+            "### You are at Risk"
+            "##### You just spent more than 70% of your screen time in a BAD POSTURE!"
+            """
+             - 'Eye Strain': Looking too high or too low at your screen can cause eye strain, leading to dry eyes, headaches, and blurry vision
+             - 'Computer Vision Syndrome (CVS)': CVS encompasses a range of eye strain and discomfort experienced during computer use. Maintaining a bad eye level can worsen CVS symptoms.
+            
+            """
