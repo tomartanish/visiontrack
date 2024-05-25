@@ -4,3 +4,4 @@ numpy
 opencv-python
 mediapipe
 watchdog
+streamlit-webrtc
