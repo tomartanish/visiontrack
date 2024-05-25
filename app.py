@@ -14,6 +14,9 @@ class FacePoseDetector(VideoTransformerBase):
         self.processed_frame = None
 
     def transform(self, frame):
+        if frame is None:
+            return None
+
         image = frame.to_ndarray(format="bgr24")
         img_h, img_w, _ = image.shape
         face_3d = []
