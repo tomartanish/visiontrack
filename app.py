@@ -32,40 +32,39 @@ position: fixed;
 left: 2;
 bottom: 0;
 width: 100%;
-background-color: rgb(14, 17, 23);
+background-color: transparent;
 color: white;
 text-align: left;
 }
 </style>
 <div class="footer">
-<p>Developed with ❤ by Team Brackets</p>
+<p>Made with ❤ by Team Brackets</p>
 </div>
 """
 st.markdown(footer,unsafe_allow_html=True)
+page_bg_img = """
+<style>
+[data-testid="stAppViewBlockContainer"] {
+background-image: url("https://i.imgur.com/5zpQXW7.png");
+background-size: cover;
+}
+
+[data-testid="stHeader"] {
+background-color: rgba(0,0,0,0);
+}
 
 
+</style>
 
-st.cache_data(experimental_allow_widgets=True)
-def get_base64_of_bin_file(bin_file):
-    with open(bin_file, 'rb') as f:
-        data = f.read()
-    return base64.b64encode(data).decode()
+"""
+st.markdown(page_bg_img, unsafe_allow_html=True)
+element1 = """
+[data-testid="element-container"] {
+background-color: rgba(0,0,0,0);
+}
 
-def set_png_as_page_bg(png_file):
-    bin_str = get_base64_of_bin_file(png_file)
-    page_bg_img = '''
-    <style>
-    body {
-    background-image: url("data:image/png;base64,%s");
-    background-size: cover;
-    }
-    </style>
-    ''' % bin_str
-    
-    st.markdown(page_bg_img, unsafe_allow_html=True)
-    return
+"""
 
-#set_png_as_page_bg('bg.png')
 good_duration = 0
 bad_duration = 0
 total_screentime = good_duration + bad_duration
@@ -96,9 +95,8 @@ def toggle_checkbox():
 
 # Streamlit app title
 with right:
-    #st.image("https://imgs.search.brave.com/6ethPl2SMeVLlGIOceAuLnADslieJtjz2eSC3fnGfrI/rs:fit:860:0:0/g:ce/aHR0cHM6Ly93d3cu/ZXJnb3Ryb24uY29t/L1BvcnRhbHMvMC9J/bWFnZXMvZXJnby1t/b25pdG9yLXRpcHMu/anBn",width=200)
     # Checkbox for indefinite running
-    run_indefinitely = st.checkbox('Indefinite', value=st.session_state['run_indefinitely'])
+    run_indefinitely = st.checkbox('Run Indefinitely', value=st.session_state['run_indefinitely'])
     st.session_state['run_indefinitely'] = run_indefinitely
 
     # Slider placeholder
@@ -214,11 +212,11 @@ with left:
                     if start_time_bad is None and start_time_good is None:
                         start_time_bad = time.time()
                     elif start_time_bad is None and start_time_good is not None:
-                        good_eye_level_duration += 4.5*(time.time() - start_time_good)
+                        good_eye_level_duration += (time.time() - start_time_good)
                         start_time_good = None
                         start_time_bad = time.time()
                     else:
-                        bad_eye_level_duration += 4.5*(time.time() - start_time_bad)
+                        bad_eye_level_duration += (time.time() - start_time_bad)
                         start_time_bad = None
                 elif -10 <= x <= 10:
                     text = "Good Eye Level"
@@ -281,7 +279,7 @@ with cols[0]:
 with cols[1]:
     ui.metric_card(title="Bad Eye Posture", content=f"{bad_duration:.2f} seconds", description="", key="card2")
 with cols[2]:
-    ui.metric_card(title="Total Screen time", content=f"{(good_duration+bad_duration):.2f} seconds", description="", key="card3")
+    ui.metric_card(title="Total Screen time", content=f"{good_duration+bad_duration:.2f} seconds", description="", key="card3")
 with right:
     "#### Your Report"
     if sum(sizes) > 0:
