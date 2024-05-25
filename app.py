@@ -9,6 +9,10 @@ face_mesh = mp_face_mesh.FaceMesh(min_detection_confidence=0.5, min_tracking_con
 mp_drawing = mp.solutions.drawing_utils
 
 class FacePoseDetector(VideoTransformerBase):
+    def __init__(self):
+        super().__init__()
+        self.processed_frame = None
+
     def transform(self, frame):
         image = frame.to_ndarray(format="bgr24")
         img_h, img_w, _ = image.shape
@@ -60,6 +64,8 @@ class FacePoseDetector(VideoTransformerBase):
             cv2.line(image, p1, p2, (255, 0, 0), 3)
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
+            self.processed_frame = image
+
         return image
 
 st.title("Vision Track")
@@ -75,6 +81,6 @@ webrtc_ctx = webrtc_streamer(
 )
 
 if webrtc_ctx.video_transformer:
-    st.image(webrtc_ctx.video_transformer.frame_out, channels="RGB")  # Display the processed video frames
+    st.image(webrtc_ctx.video_transformer.processed_frame, channels="RGB")  # Display the processed video frames
 
 st.text("Run the Camera to detect posture.")
