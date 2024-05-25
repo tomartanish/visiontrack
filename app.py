@@ -91,8 +91,8 @@ st.write(
 
 webrtc_ctx = webrtc_streamer(
     key="face-pose",
-    video_transformer_factory=FacePoseDetector,
-    async_transform=True,
+    video_processor_factory=FacePoseDetector,
+    async_processing=True,
     sendback_audio=False,
 )
 
