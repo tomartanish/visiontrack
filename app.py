@@ -75,6 +75,6 @@ webrtc_ctx = webrtc_streamer(
 )
 
 if webrtc_ctx.video_transformer:
-    st.image(webrtc_ctx.video_transformer.next(), channels="RGB")  # Display the processed video frames
+    st.image(webrtc_ctx.video_transformer.frame_out, channels="RGB")  # Display the processed video frames
 
 st.text("Run the Camera to detect posture.")
