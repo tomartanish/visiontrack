@@ -14,68 +14,73 @@ st.set_page_config(
 )
 left, right = st.columns(2)
 
-footer="""<style>
-a:link , a:visited{
-color: blue;
-background-color: transparent;
-text-decoration: underline;
+footer = """<style>
+a:link , a:visited {
+    color: blue;
+    background-color: transparent;
+    text-decoration: underline;
 }
 
-a:hover,  a:active {
-color: red;
-background-color: transparent;
-text-decoration: underline;
+a:hover, a:active {
+    color: red;
+    background-color: transparent;
+    text-decoration: underline;
 }
 
 .footer {
-position: fixed;
-left: 2;
-bottom: 0;
-width: 100%;
-background-color: transparent;
-color: white;
-text-align: left;
+    position: fixed;
+    left: 2;
+    bottom: 0;
+    width: 100%;
+    background-color: transparent;
+    color: white;
+    text-align: left;
 }
 </style>
 <div class="footer">
 <p>Made with ❤ by Team Brackets</p>
 </div>
 """
-st.markdown(footer,unsafe_allow_html=True)
-page_bg_img = """
+st.markdown(footer, unsafe_allow_html=True)
+
+# Read the image and encode it to base64
+def get_base64_image(image_path):
+    with open(image_path, "rb") as image_file:
+        return base64.b64encode(image_file.read()).decode()
+
+bg_image_base64 = get_base64_image("bg.png")
+
+page_bg_img = f"""
 <style>
-[data-testid="stAppViewBlockContainer"] {
-background-image: url("https://i.imgur.com/5zpQXW7.png");
-background-size: cover;
-}
+[data-testid="stAppViewBlockContainer"] {{
+    background-image: url("data:image/png;base64,{bg_image_base64}");
+    background-size: cover;
+}}
 
-[data-testid="stHeader"] {
-background-color: rgba(0,0,0,0);
-}
-
-
+[data-testid="stHeader"] {{
+    background-color: rgba(0,0,0,0);
+}}
 </style>
-
 """
 st.markdown(page_bg_img, unsafe_allow_html=True)
+
 element1 = """
 [data-testid="element-container"] {
-background-color: rgba(0,0,0,0);
+    background-color: rgba(0,0,0,0);
 }
-
 """
 
 good_duration = 0
 bad_duration = 0
 total_screentime = good_duration + bad_duration
-with left:
 
+with left:
     "# Vision Track"
     with ui.element("div", className="flex gap-2", key="buttons_group1"):
         ui.element("link_button", text="Diagnosia | Home", url="https://diagnosia.netlify.app", variant="outline", key="btn1")
 
-    """Vision Track monitors your eye posture using your webcam, """
-    """ providing real-time feedback and duration stats to promote healthier screen habits."""
+    "Vision Track monitors your eye posture using your webcam, providing real-time feedback and duration stats to promote healthier screen habits."
+
 # Initialize the MediaPipe Face Mesh
 mp_face_mesh = mp.solutions.face_mesh
 face_mesh = mp_face_mesh.FaceMesh(min_detection_confidence=0.5, min_tracking_confidence=0.5)
@@ -234,70 +239,27 @@ with left:
                 nose_3d_projection, jacobian = cv2.projectPoints(nose_3d, rot_vec, trans_vec, cam_matrix, dist_matrix)
                 p1 = (int(nose_2d[0]), int(nose_2d[1]))
                 p2 = (int(nose_2d[0] + y * 10), int(nose_2d[1] - x * 10))
+
                 cv2.line(image, p1, p2, (255, 0, 0), 3)
-                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+                # Add the text on the image
+                cv2.putText(image, text, (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                
+        else:
+            text = "No face detected"
+            cv2.putText(image, text, (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
         FRAME_WINDOW.image(image)
-        posture_placeholder.text(text)
-        good_duration = good_eye_level_duration
-        bad_duration = bad_eye_level_duration  
+
+        good_duration = round(good_eye_level_duration, 1)
+        bad_duration = round(bad_eye_level_duration, 1)
+        total_screentime = good_duration + bad_duration
+
         with right:
-            goodtime_placeholder.text(f"Good Eye Level Time: {good_duration:.2f} seconds")
-            badtime_placeholder.text(f"Bad Eye Level Time: {bad_duration:.2f} seconds")
+            posture_placeholder.metric(label="Current posture", value=text)
+            goodtime_placeholder.metric(label="Good eye level duration", value=f"{good_duration} seconds")
+            badtime_placeholder.metric(label="Bad eye level duration", value=f"{bad_duration} seconds")
+            totaltime_placeholder.metric(label="Total screen time", value=f"{total_screentime} seconds")
 
-    else:
-        if start_time_good is not None:
-            good_eye_level_duration += (time.time() - start_time_good)
-            start_time_good = None
-
-        if start_time_bad is not None:
-            bad_eye_level_duration += (time.time() - start_time_bad)
-            start_time_bad = None
-
-        # Update the total duration with the time since the last start time
-        with left:
-            FRAME_WINDOW.image([])
-        st.session_state['checkbox_state'] = False
-        with right:
-            goodtime_placeholder.text("")
-            badtime_placeholder.text("")
-            posture_placeholder.text("Run the Camera to detect posture.")
-
-# Release the video capture object
 cap.release()
-if good_duration + bad_duration > 0:
-    perc_good = (good_duration / (good_duration + bad_duration)) * 100
-    perc_bad = (bad_duration / (good_duration + bad_duration)) * 100
-else:
-    perc_good = 0
-    perc_bad = 0
-
-labels = 'Good Posture Duration', 'Bad Posture Duration'
-sizes = [perc_good, perc_bad]
-with cols[0]:
-    ui.metric_card(title="Good Eye Posture", content=f"{good_duration:.2f} seconds", description="", key="card1")
-with cols[1]:
-    ui.metric_card(title="Bad Eye Posture", content=f"{bad_duration:.2f} seconds", description="", key="card2")
-with cols[2]:
-    ui.metric_card(title="Total Screen time", content=f"{good_duration+bad_duration:.2f} seconds", description="", key="card3")
-with right:
-    "#### Your Report"
-    if sum(sizes) > 0:
-        with right:
-            fig1, ax1 = plt.subplots()
-            ax1.pie(sizes, labels=labels, autopct='%1.1f%%', shadow=True, startangle=90)
-            ax1.axis('equal')
-            st.pyplot(fig1)
-    else:
-        with right:
-            st.write("No data to display in the pie chart.")
-
-    if perc_bad >= 70:
-        with left:
-            "### You are at Risk"
-            "##### You just spent more than 70% of your screen time in a BAD POSTURE!"
-            """
-             - 'Eye Strain': Looking too high or too low at your screen can cause eye strain, leading to dry eyes, headaches, and blurry vision
-             - 'Computer Vision Syndrome (CVS)': CVS encompasses a range of eye strain and discomfort experienced during computer use. Maintaining a bad eye level can worsen CVS symptoms.
-            
-            """
+cv2.destroyAllWindows()
